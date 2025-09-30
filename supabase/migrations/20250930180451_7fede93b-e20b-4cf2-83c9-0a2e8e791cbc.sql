@@ -1,0 +1,15 @@
+-- Insert sample products into the database
+INSERT INTO products (name_en, name_fr, description_en, description_fr, price, category, images, sizes, is_active)
+VALUES
+  ('Tim Hortons Polo Shirt', 'Polo Tim Hortons', 'Official Tim Hortons polo shirt in signature red color. Available in multiple sizes.', 'Polo officiel Tim Hortons en rouge signature. Disponible en plusieurs tailles.', 24.99, 'Apparel', ARRAY['/placeholder.svg', '/placeholder.svg'], ARRAY['S', 'M', 'L', 'XL', '2XL'], true),
+  ('Tim Hortons Apron', 'Tablier Tim Hortons', 'Durable apron with Tim Hortons branding and multiple pockets for convenience.', 'Tablier durable avec la marque Tim Hortons et plusieurs poches pour plus de commodité.', 19.99, 'Apparel', ARRAY['/placeholder.svg'], NULL, true),
+  ('Tim Hortons Cap', 'Casquette Tim Hortons', 'Official branded cap with adjustable strap. One size fits most.', 'Casquette officielle de marque avec sangle ajustable. Taille unique.', 14.99, 'Apparel', ARRAY['/placeholder.svg'], NULL, true),
+  ('Coffee Brewing Equipment', 'Équipement de préparation du café', 'Professional coffee brewing equipment for Tim Hortons stores.', 'Équipement professionnel de préparation du café pour les magasins Tim Hortons.', 149.99, 'Equipment', ARRAY['/placeholder.svg'], NULL, true),
+  ('Display Case', 'Vitrine d''exposition', 'Refrigerated display case for donuts and baked goods.', 'Vitrine réfrigérée pour beignes et produits de boulangerie.', 899.99, 'Equipment', ARRAY['/placeholder.svg'], NULL, true);
+
+-- Insert sample kits into the database
+INSERT INTO kits (name_en, name_fr, description_en, description_fr, category, images, is_standard, is_active, requires_approval)
+VALUES
+  ('Tim Hortons Staff Uniform Kit', 'Ensemble d''uniformes pour le personnel Tim Hortons', 'Complete staff uniform kit including polo shirt, apron, cap, and name tag. Available in standard sizes.', 'Ensemble complet d''uniformes pour le personnel comprenant un polo, un tablier, une casquette et un porte-nom. Disponible en tailles standard.', 'Kits', ARRAY['/placeholder.svg', '/placeholder.svg', '/placeholder.svg'], true, true, false),
+  ('Premium Staff Kit', 'Ensemble premium pour le personnel', 'Premium uniform kit with enhanced materials and additional accessories including jacket and premium apron.', 'Ensemble d''uniformes premium avec des matériaux améliorés et des accessoires supplémentaires, y compris une veste et un tablier premium.', 'Kits', ARRAY['/placeholder.svg', '/placeholder.svg'], true, true, false),
+  ('Tim Hortons Signage Kit', 'Ensemble de signalisation Tim Hortons', 'Complete signage package including menu boards, promotional displays, and window decals.', 'Ensemble complet de signalisation comprenant des tableaux de menu, des présentoirs promotionnels et des autocollants de fenêtre.', 'Kits', ARRAY['/placeholder.svg'], true, true, false);

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
@@ -10,9 +10,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { mockProducts } from '@/data/mockData';
+import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCart } from '@/contexts/CartContext';
+import type { Product } from '@/types';
 import { ShoppingCart, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -22,10 +23,85 @@ export default function ProductDetail() {
   const { language, t } = useLanguage();
   const { addItem } = useCart();
   
-  const product = mockProducts.find(p => p.id === id);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string | undefined>(undefined);
   const [quantity, setQuantity] = useState(1);
+
+  useEffect(() => {
+    loadProduct();
+  }, [id]);
+
+  const loadProduct = async () => {
+    if (!id) return;
+    
+    try {
+      setLoading(true);
+      
+      // Try to fetch as a product first
+      const { data: productData } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', id)
+        .eq('is_active', true)
+        .single();
+
+      if (productData) {
+        setProduct({
+          id: productData.id,
+          nameEn: productData.name_en,
+          nameFr: productData.name_fr,
+          descriptionEn: productData.description_en || '',
+          descriptionFr: productData.description_fr || '',
+          price: Number(productData.price),
+          category: productData.category,
+          images: productData.images,
+          sizes: productData.sizes || undefined,
+          isKit: false,
+        });
+        return;
+      }
+
+      // If not found, try to fetch as a kit
+      const { data: kitData } = await supabase
+        .from('kits')
+        .select('*')
+        .eq('id', id)
+        .eq('is_active', true)
+        .single();
+
+      if (kitData) {
+        setProduct({
+          id: kitData.id,
+          nameEn: kitData.name_en,
+          nameFr: kitData.name_fr,
+          descriptionEn: kitData.description_en || '',
+          descriptionFr: kitData.description_fr || '',
+          price: 0,
+          category: kitData.category,
+          images: kitData.images,
+          isKit: true,
+        });
+      }
+    } catch (error) {
+      console.error('Error loading product:', error);
+      toast.error('Failed to load product');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="container py-8 px-4">
+          <p className="text-center">Loading...</p>
+        </main>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
