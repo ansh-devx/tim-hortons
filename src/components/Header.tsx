@@ -1,16 +1,32 @@
-import { Link } from 'react-router-dom';
-import { ShoppingCart, User, Globe } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ShoppingCart, User, Globe, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 export const Header = () => {
   const { language, setLanguage, t } = useLanguage();
   const { items } = useCart();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   const toggleLanguage = () => {
     setLanguage(language === 'en' ? 'fr' : 'en');
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success(language === 'en' ? 'Logged out successfully' : 'Déconnexion réussie');
+    navigate('/login');
   };
 
   const cartItemCount = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -54,9 +70,30 @@ export const Header = () => {
             </Button>
           </Link>
 
-          <Button variant="ghost" size="icon">
-            <User className="h-5 w-5" />
-          </Button>
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <User className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem disabled className="text-xs text-muted-foreground">
+                  {user.email}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  {language === 'en' ? 'Logout' : 'Déconnexion'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Link to="/login">
+              <Button variant="ghost" size="icon">
+                <User className="h-5 w-5" />
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
     </header>
