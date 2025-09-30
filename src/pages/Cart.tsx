@@ -1,21 +1,98 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useCart } from '@/contexts/CartContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Trash2, ShoppingBag } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export default function Cart() {
-  const { items, removeItem, updateQuantity, kitTotal, individualTotal, total } = useCart();
+  const { items, removeItem, updateQuantity, kitTotal, individualTotal, total, clearCart } = useCart();
   const { language, t } = useLanguage();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   const formatPrice = (price: number) => {
     return price.toLocaleString('en-CA', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
+  };
+
+  const handleCheckout = async () => {
+    if (!user) {
+      toast.error('Please log in to checkout');
+      navigate('/login');
+      return;
+    }
+
+    setIsCheckingOut(true);
+    try {
+      // Get user's first assigned store
+      const { data: userStores, error: storesError } = await supabase
+        .from('user_stores')
+        .select('store_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .single();
+
+      if (storesError || !userStores) {
+        toast.error('No store assigned to your account');
+        return;
+      }
+
+      // Create order
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          user_id: user.id,
+          store_id: userStores.store_id,
+          order_number: `ORD-${Date.now()}`,
+          kit_subtotal: kitTotal,
+          individual_subtotal: individualTotal,
+          total: total,
+          order_status: 'pending',
+          payment_status: 'pending'
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Create order items
+      const orderItems = items.map(item => ({
+        order_id: order.id,
+        product_id: item.product.isKit ? null : item.product.id,
+        kit_id: item.product.isKit ? item.product.id : null,
+        quantity: item.quantity,
+        size: item.size,
+        unit_price: item.product.price,
+        extended_price: item.product.price * item.quantity,
+        is_kit: item.product.isKit
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      toast.success('Order placed successfully!');
+      clearCart();
+      navigate('/orders');
+    } catch (error) {
+      console.error('Checkout error:', error);
+      toast.error('Failed to place order. Please try again.');
+    } finally {
+      setIsCheckingOut(false);
+    }
   };
 
   const kitItems = items.filter(item => item.product.isKit);
@@ -207,8 +284,13 @@ export default function Cart() {
                   </p>
                 )}
                 
-                <Button className="w-full" size="lg">
-                  {t('cart.checkout')}
+                <Button 
+                  className="w-full" 
+                  size="lg"
+                  onClick={handleCheckout}
+                  disabled={isCheckingOut}
+                >
+                  {isCheckingOut ? 'Processing...' : t('cart.checkout')}
                 </Button>
 
                 <Link to="/store">

@@ -11,11 +11,24 @@ import {
 } from '@/components/ui/select';
 import { mockProducts, mockStores } from '@/data/mockData';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useCart } from '@/contexts/CartContext';
+import type { Product } from '@/types';
+import { toast } from 'sonner';
 
 export default function Store() {
   const { t } = useLanguage();
+  const { addItem } = useCart();
   const [selectedStore, setSelectedStore] = useState(mockStores[0].id);
   const [selectedCategory, setSelectedCategory] = useState('all');
+
+  const handleAddToCart = (product: Product) => {
+    addItem({
+      product,
+      quantity: 1,
+      size: product.sizes?.[0]
+    });
+    toast.success('Added to cart!');
+  };
 
   const categories = ['all', ...Array.from(new Set(mockProducts.map(p => p.category)))];
 
@@ -77,7 +90,7 @@ export default function Store() {
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredProducts.map(product => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} />
           ))}
         </div>
       </main>

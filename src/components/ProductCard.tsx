@@ -8,12 +8,20 @@ import { ShoppingCart } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
+  onAddToCart?: (product: Product) => void;
 }
 
-export const ProductCard = ({ product }: ProductCardProps) => {
+export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
   const { language, t } = useLanguage();
   const name = language === 'en' ? product.nameEn : product.nameFr;
   const description = language === 'en' ? product.descriptionEn : product.descriptionFr;
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (onAddToCart) {
+      onAddToCart(product);
+    }
+  };
 
   const formatPrice = (price: number) => {
     return price.toLocaleString('en-CA', {
@@ -56,7 +64,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
             `$${formatPrice(product.price)}`
           )}
         </div>
-        <Button size="sm" variant="outline">
+        <Button size="sm" variant="outline" onClick={handleAddToCart}>
           <ShoppingCart className="mr-2 h-4 w-4" />
           {t('product.addToCart')}
         </Button>
