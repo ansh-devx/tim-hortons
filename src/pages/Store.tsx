@@ -102,20 +102,34 @@ export default function Store() {
   };
 
   const handleAddToCart = (product: Product) => {
-    addItem({
-      product,
-      quantity: 1,
-      size: product.sizes?.[0]
-    });
-    toast.success('Added to cart!');
+    try {
+      addItem({
+        product,
+        quantity: 1,
+        size: product.sizes?.[0]
+      });
+      toast.success('Added to cart!');
+    } catch (error: any) {
+      if (error.message === 'ONLY_ONE_KIT_ALLOWED') {
+        toast.error('You can only add one kit per order. Please checkout your current kit first.');
+      } else {
+        toast.error('Failed to add item to cart');
+      }
+    }
   };
 
   const categories = ['all', ...Array.from(new Set(products.map(p => p.category)))];
 
-  const filteredProducts =
+  const filteredProducts = (
     selectedCategory === 'all'
       ? products
-      : products.filter(p => p.category === selectedCategory);
+      : products.filter(p => p.category === selectedCategory)
+  ).sort((a, b) => {
+    // Kits first, then individual products
+    if (a.isKit && !b.isKit) return -1;
+    if (!a.isKit && b.isKit) return 1;
+    return 0;
+  });
 
   if (loading) {
     return (

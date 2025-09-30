@@ -216,7 +216,11 @@ export default function Orders() {
         ) : (
           <div className="space-y-4">
             {filteredOrders.map(order => (
-              <Card key={order.id}>
+              <Card 
+                key={order.id} 
+                className="cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={() => navigate(`/orders/${order.id}`)}
+              >
                 <CardHeader>
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
