@@ -18,15 +18,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [items, setItems] = useState<CartItem[]>([]);
 
   const addItem = (item: CartItem) => {
-    setItems(prev => {
-      // Check if trying to add a kit when one already exists
-      if (item.product.isKit) {
-        const hasKit = prev.some(i => i.product.isKit);
-        if (hasKit) {
-          throw new Error('ONLY_ONE_KIT_ALLOWED');
-        }
+    // Check if trying to add a kit when one already exists
+    if (item.product.isKit) {
+      const hasKit = items.some(i => i.product.isKit);
+      if (hasKit) {
+        throw new Error('ONLY_ONE_KIT_ALLOWED');
       }
+    }
 
+    setItems(prev => {
       const existingIndex = prev.findIndex(
         i => i.product.id === item.product.id && i.size === item.size
       );
