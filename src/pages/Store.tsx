@@ -145,7 +145,7 @@ export default function Store() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       <main className="container py-8 px-4">
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -157,7 +157,7 @@ export default function Store() {
             </p>
           </div>
 
-          {stores.length > 0 && (
+          {/* {stores.length > 0 && (
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               <Select value={selectedStore} onValueChange={setSelectedStore}>
                 <SelectTrigger className="w-full sm:w-64">
@@ -172,10 +172,10 @@ export default function Store() {
                 </SelectContent>
               </Select>
             </div>
-          )}
+          )} */}
         </div>
 
-        <div className="mb-6 flex flex-wrap gap-2">
+        <div className="mb-6 flex md:flex-wrap flex-nowrap gap-2 overflow-x-scroll md:overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <Button
             variant={selectedCategory === 'all' ? 'default' : 'outline'}
             onClick={() => setSelectedCategory('all')}
