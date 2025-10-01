@@ -23,6 +23,7 @@ interface Product {
   name_en: string;
   name_fr: string;
   category: string;
+  category_fr?: string;
   price: number;
   images: string[];
   is_kit?: boolean;
@@ -86,6 +87,7 @@ export default function BulkOrder() {
         name_en: p.name_en,
         name_fr: p.name_fr,
         category: p.category,
+        category_fr: p.category_fr,
         price: p.price,
         images: p.images || ['/placeholder-product.jpg'],
         is_kit: false,
@@ -106,6 +108,7 @@ export default function BulkOrder() {
         name_en: kit.name_en,
         name_fr: kit.name_fr,
         category: kit.category,
+        category_fr: kit.category_fr,
         price: 0,
         images: kit.images || ['/placeholder-product.jpg'],
         is_kit: true,
@@ -195,6 +198,7 @@ export default function BulkOrder() {
             descriptionEn: '', // Default empty description
             descriptionFr: '', // Default empty description
             category: product.category,
+            categoryFr: product.category_fr,
             price: product.price,
             images: product.images || ['/placeholder-product.jpg'], // Use actual product images
             isKit: product.is_kit || false,
@@ -234,10 +238,27 @@ export default function BulkOrder() {
     }
   };
 
-  const categories = ['all', ...new Set([...products, ...kits].map(p => p.category))];
+  // Create a mapping from English categories to French categories
+  const allItems = [...products, ...kits];
+  const categoryTranslationMap = allItems.reduce((map, item) => {
+    if (item.category_fr && !map[item.category]) {
+      map[item.category] = item.category_fr;
+    }
+    return map;
+  }, {} as Record<string, string>);
+
+  const translateCategory = (category: string) => {
+    if (category === 'all') return t('store.allItems');
+    // Use database French category if available, otherwise return English category
+    return language === 'fr' && categoryTranslationMap[category]
+      ? categoryTranslationMap[category]
+      : category;
+  };
+
+  const categories = ['all', ...new Set(allItems.map(p => p.category))];
   const filteredItems = selectedCategory === 'all'
-    ? [...products, ...kits]
-    : [...products, ...kits].filter(p => p.category === selectedCategory);
+    ? allItems
+    : allItems.filter(p => p.category === selectedCategory);
 
   const formatPrice = (price: number) => {
     return price.toLocaleString('en-CA', {
@@ -320,9 +341,7 @@ export default function BulkOrder() {
                   onClick={() => setSelectedCategory(category)}
                   size="sm"
                 >
-                  {category === 'all'
-                    ? language === 'en' ? 'All Items' : 'Tous les articles'
-                    : category}
+                  {translateCategory(category)}
                 </Button>
               ))}
             </div>
@@ -371,7 +390,7 @@ export default function BulkOrder() {
                             </div>
                           </td>
                           <td className="px-4 py-3 text-sm text-muted-foreground">
-                            {item.category}
+                            {language === 'fr' && item.category_fr ? item.category_fr : item.category}
                           </td>
                           <td className="px-4 py-3 text-right">
                             {item.is_kit ? (
