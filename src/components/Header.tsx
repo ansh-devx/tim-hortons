@@ -54,7 +54,7 @@ export const Header = () => {
         </nav>
 
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={toggleLanguage}>
+          <Button className="w-full" variant="ghost" size="icon" onClick={toggleLanguage}>
             <Globe className="h-5 w-5" />
             <span className="ml-1 text-xs font-semibold">{language.toUpperCase()}</span>
           </Button>
