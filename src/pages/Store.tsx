@@ -109,16 +109,18 @@ export default function Store() {
         size: product.sizes?.[0]
       });
       toast.success('Added to cart!');
-    } catch (error: any) {
-      if (error.message === 'ONLY_ONE_KIT_ALLOWED') {
-        toast.error('You can only add one kit per order. Please checkout your current kit first.');
-      } else {
-        toast.error('Failed to add item to cart');
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        if (error.message === 'ONLY_ONE_KIT_ALLOWED') {
+          toast.error('You can only add one kit per order. Please checkout your current kit first.');
+        } else {
+          toast.error('Failed to add item to cart');
+        }
       }
     }
   };
 
-  const categories = ['all', ...Array.from(new Set(products.map(p => p.category)))];
+  const categories = ['all', ...Array.from(new Set(products.map(p => p.category))).sort()];
 
   const filteredProducts = (
     selectedCategory === 'all'
@@ -136,7 +138,7 @@ export default function Store() {
       <div className="min-h-screen bg-background">
         <Header />
         <main className="container py-8 px-4">
-          <p className="text-center">Loading products...</p>
+          {/* <p className="text-center">Loading products...</p> */}
         </main>
       </div>
     );

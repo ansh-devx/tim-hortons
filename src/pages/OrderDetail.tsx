@@ -51,7 +51,7 @@ export default function OrderDetail() {
   const { language, t } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
-  
+
   const [order, setOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,7 +67,7 @@ export default function OrderDetail() {
   const loadOrderDetails = async () => {
     try {
       setLoading(true);
-      
+
       // Fetch order details
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
@@ -109,13 +109,21 @@ export default function OrderDetail() {
     });
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-CA', {
+    const dateStr = date.toLocaleDateString('en-CA', {
       year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).replace(/-/g, '/'); // Convert YYYY-MM-DD to YYYY/MM/DD
+
+    const timeStr = date.toLocaleTimeString('en-CA', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
     });
+
+    return `${dateStr} at ${timeStr}`;
   };
 
   const getStatusBadge = (status: string) => {
@@ -183,7 +191,7 @@ export default function OrderDetail() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       <main className="container py-8 px-4 max-w-6xl">
         <Button
           variant="ghost"
@@ -194,58 +202,95 @@ export default function OrderDetail() {
           {language === 'en' ? 'Back to Orders' : 'Retour aux commandes'}
         </Button>
 
-        <Card className="mb-6">
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <CardTitle className="text-2xl">
-                  {order.order_number}
-                </CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {order.stores?.name}
-                </p>
+        <Card className="mb-8 shadow-lg border-0 bg-gradient-to-r from-white to-gray-50">
+          <CardHeader className="pb-6">
+            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="h-12 w-1 bg-red-600 rounded-full"></div>
+                  <div>
+                    <CardTitle className="text-3xl font-bold text-gray-900">
+                      {order.order_number}
+                    </CardTitle>
+                    <p className="text-lg text-gray-600 mt-1 font-medium">
+                      {order.stores?.name}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {getStatusBadge(order.order_status)}
-                {getPaymentBadge(order.payment_status)}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-600">
+                    {language === 'en' ? 'Order Status:' : 'État commande:'}
+                  </span>
+                  {getStatusBadge(order.order_status)}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-600">
+                    {language === 'en' ? 'Payment Status:' : 'État paiement:'}
+                  </span>
+                  {order.individual_subtotal === 0 ? (
+                    <Badge className="bg-green-500 text-white">
+                      {language === 'en' ? 'N/A (Billed to HO)' : 'S/O (Facturé au siège)'}
+                    </Badge>
+                  ) : (
+                    getPaymentBadge(order.payment_status)
+                  )}
+                </div>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center gap-3">
-                <Calendar className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-xs text-muted-foreground">
-                    {language === 'en' ? 'Order Date' : 'Date de commande'}
-                  </p>
-                  <p className="font-medium">
-                    {formatDate(order.created_at)}
-                  </p>
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Calendar className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-blue-800">
+                      {language === 'en' ? 'Order Date & Time' : 'Date et heure'}
+                    </p>
+                    <p className="text-lg font-bold text-blue-900">
+                      {formatDateTime(order.created_at)}
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <Package className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-xs text-muted-foreground">
-                    {language === 'en' ? 'Total Items' : 'Total articles'}
-                  </p>
-                  <p className="font-medium">
-                    {orderItems.reduce((sum, item) => sum + item.quantity, 0)}
-                  </p>
+              <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <Package className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-purple-800">
+                      {language === 'en' ? 'Total Items' : 'Total articles'}
+                    </p>
+                    <p className="text-lg font-bold text-purple-900">
+                      {orderItems.reduce((sum, item) => sum + item.quantity, 0)} {language === 'en' ? 'items' : 'articles'}
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <DollarSign className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-xs text-muted-foreground">
-                    {language === 'en' ? 'Your Total' : 'Votre total'}
-                  </p>
-                  <p className="font-medium text-primary">
-                    ${formatPrice(order.individual_subtotal)}
-                  </p>
+              <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <DollarSign className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-green-800">
+                      {language === 'en' ? 'Your Payment' : 'Votre paiement'}
+                    </p>
+                    <p className="text-lg font-bold text-green-900">
+                      {order.individual_subtotal === 0 ? (
+                        language === 'en' ? 'Billed to HO' : 'Facturé au siège'
+                      ) : (
+                        `$${formatPrice(order.individual_subtotal)}`
+                      )}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -262,21 +307,33 @@ export default function OrderDetail() {
         </Card>
 
         {kitItems.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                {language === 'en' ? 'Kit Items' : 'Articles trousse'}
-                <span className="text-sm font-normal text-muted-foreground">
-                  ({language === 'en' ? 'Billed to Head Office' : 'Facturé au siège'})
-                </span>
-              </CardTitle>
+          <Card className="mb-8 shadow-md border-l-4 border-l-red-600">
+            <CardHeader className="bg-red-50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-100 rounded-lg">
+                  <Package className="h-6 w-6 text-red-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-bold text-red-800">
+                    {language === 'en' ? 'Kit Items' : 'Articles trousse'}
+                  </CardTitle>
+                  <p className="text-sm text-red-600 font-medium">
+                    {language === 'en' ? 'Billed to Head Office' : 'Facturé au siège'}
+                  </p>
+                </div>
+                <div className="ml-auto">
+                  <Badge className="bg-yellow-100 text-yellow-800 border border-yellow-300">
+                    {kitItems.length} {language === 'en' ? 'kit(s)' : 'trousse(s)'}
+                  </Badge>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {kitItems.map(item => {
                   const name = language === 'en' ? item.kits?.name_en : item.kits?.name_fr;
                   const image = item.kits?.images?.[0] || '/placeholder.svg';
-                  
+
                   return (
                     <div key={item.id} className="flex gap-4">
                       <img
@@ -304,9 +361,9 @@ export default function OrderDetail() {
                   );
                 })}
               </div>
-              
+
               <Separator className="my-4" />
-              
+
               <div className="flex justify-between text-sm">
                 <span className="font-medium">
                   {language === 'en' ? 'Kit Subtotal' : 'Sous-total trousse'}
@@ -320,18 +377,33 @@ export default function OrderDetail() {
         )}
 
         {individualItems.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>
-                {language === 'en' ? 'Individual Items' : 'Articles individuels'}
-              </CardTitle>
+          <Card className="mb-8 shadow-md border-l-4 border-l-blue-600">
+            <CardHeader className="bg-blue-50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <DollarSign className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-bold text-blue-800">
+                    {language === 'en' ? 'Individual Items' : 'Articles individuels'}
+                  </CardTitle>
+                  <p className="text-sm text-blue-600 font-medium">
+                    {language === 'en' ? 'Credit Card Payment' : 'Paiement par carte'}
+                  </p>
+                </div>
+                <div className="ml-auto">
+                  <Badge className="bg-blue-100 text-blue-800 border border-blue-300">
+                    {individualItems.length} {language === 'en' ? 'item(s)' : 'article(s)'}
+                  </Badge>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {individualItems.map(item => {
                   const name = language === 'en' ? item.products?.name_en : item.products?.name_fr;
                   const image = item.products?.images?.[0] || '/placeholder.svg';
-                  
+
                   return (
                     <div key={item.id} className="flex gap-4">
                       <img
@@ -362,9 +434,9 @@ export default function OrderDetail() {
                   );
                 })}
               </div>
-              
+
               <Separator className="my-4" />
-              
+
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="font-medium">

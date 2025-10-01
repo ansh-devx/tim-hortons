@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ShoppingCart, User, Globe, LogOut, Menu, Store, Package, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +26,7 @@ export const Header = () => {
   const { items } = useCart();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const toggleLanguage = () => {
@@ -40,15 +41,32 @@ export const Header = () => {
 
   const cartItemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
+  // Helper function to determine if a route is active
+  const isActiveRoute = (path: string) => {
+    if (path === '/store' && (location.pathname === '/' || location.pathname === '/store')) {
+      return true;
+    }
+    return location.pathname === path;
+  };
+
+  // Helper function to get navigation link classes
+  const getNavLinkClasses = (path: string) => {
+    const baseClasses = "text-sm font-medium px-3 py-2 rounded transition-colors";
+    const activeClasses = "bg-white text-red-600";
+    const inactiveClasses = "text-white hover:bg-white hover:text-red-600";
+
+    return `${baseClasses} ${isActiveRoute(path) ? activeClasses : inactiveClasses}`;
+  };
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b bg-red-600 backdrop-blur supports-[backdrop-filter]:bg-red-600/95">
       <div className="container flex h-16 items-center justify-between px-4">
         {/* Left: Logo + Hamburger Menu (Mobile) */}
         <div className="flex items-center gap-2">
           {/* Hamburger Menu - Mobile Only */}
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
+              <Button variant="ghost" size="icon" className="md:hidden text-white hover:bg-white hover:text-red-600">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -87,40 +105,41 @@ export const Header = () => {
 
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary">
-              <span className="text-xl font-bold text-primary-foreground">TH</span>
-            </div>
-            <span className="hidden text-xl font-bold md:inline-block">Tim Hortons</span>
+            <img
+              src="/tim-hortons.svg"
+              alt="Tim Hortons Logo"
+              className="h-8 object-contain"
+            />
           </Link>
         </div>
 
         {/* Center: Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-6">
-          <Link to="/store" className="text-sm font-medium transition-colors hover:text-primary">
+          <Link to="/store" className={getNavLinkClasses('/store')}>
             {t('nav.store')}
           </Link>
-          <Link to="/bulk-order" className="text-sm font-medium transition-colors hover:text-primary">
+          <Link to="/bulk-order" className={getNavLinkClasses('/bulk-order')}>
             {language === 'en' ? 'Bulk Order' : 'Commande en gros'}
           </Link>
-          <Link to="/orders" className="text-sm font-medium transition-colors hover:text-primary">
+          <Link to="/orders" className={getNavLinkClasses('/orders')}>
             {t('nav.orders')}
           </Link>
         </nav>
 
         {/* Right: Language, Cart, User */}
         <div className="flex items-center gap-2">
-          <Button className="w-full" variant="ghost" size="icon" onClick={toggleLanguage}>
+          <Button className="w-full text-white hover:bg-white hover:text-red-600" variant="ghost" size="icon" onClick={toggleLanguage}>
             <Globe className="h-5 w-5" />
             <span className="ml-1 text-xs font-semibold">{language.toUpperCase()}</span>
           </Button>
 
           <Link to="/cart">
-            <Button variant="ghost" size="icon" className="relative">
+            <Button variant="ghost" size="icon" className="relative text-white hover:bg-white hover:text-red-600">
               <ShoppingCart className="h-5 w-5" />
               {cartItemCount > 0 && (
                 <Badge
                   variant="destructive"
-                  className="absolute -right-1 -top-1 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center"
+                  className="absolute -right-1 -top-1 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center bg-yellow-500 text-black"
                 >
                   {cartItemCount}
                 </Badge>
@@ -131,7 +150,7 @@ export const Header = () => {
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" className="text-white hover:bg-white hover:text-red-600">
                   <User className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
@@ -147,7 +166,7 @@ export const Header = () => {
             </DropdownMenu>
           ) : (
             <Link to="/login">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="text-white hover:bg-white hover:text-red-600">
                 <User className="h-5 w-5" />
               </Button>
             </Link>

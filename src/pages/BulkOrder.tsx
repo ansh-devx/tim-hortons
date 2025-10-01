@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
 import { supabase } from '@/integrations/supabase/client';
 import { ShoppingCart, Package } from 'lucide-react';
 import { toast } from 'sonner';
@@ -23,6 +24,7 @@ interface Product {
   name_fr: string;
   category: string;
   price: number;
+  images: string[];
   is_kit?: boolean;
 }
 
@@ -35,8 +37,9 @@ interface BulkOrderItem {
 export default function BulkOrder() {
   const { language, t } = useLanguage();
   const { user } = useAuth();
+  const { addItem } = useCart();
   const navigate = useNavigate();
-  
+
   const [stores, setStores] = useState<Store[]>([]);
   const [selectedStores, setSelectedStores] = useState<string[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -76,7 +79,19 @@ export default function BulkOrder() {
         .eq('is_active', true);
 
       if (productsError) throw productsError;
-      setProducts(productsData || []);
+
+      // Convert database products to our interface format
+      const formattedProducts = (productsData || []).map(p => ({
+        id: p.id,
+        name_en: p.name_en,
+        name_fr: p.name_fr,
+        category: p.category,
+        price: p.price,
+        images: p.images || ['/placeholder-product.jpg'],
+        is_kit: false,
+      }));
+
+      setProducts(formattedProducts);
 
       // Load kits
       const { data: kitsData, error: kitsError } = await supabase
@@ -85,16 +100,17 @@ export default function BulkOrder() {
         .eq('is_active', true);
 
       if (kitsError) throw kitsError;
-      
+
       const kitsAsProducts = kitsData?.map(kit => ({
         id: kit.id,
         name_en: kit.name_en,
         name_fr: kit.name_fr,
         category: kit.category,
         price: 0,
+        images: kit.images || ['/placeholder-product.jpg'],
         is_kit: true,
       })) || [];
-      
+
       setKits(kitsAsProducts);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -113,6 +129,14 @@ export default function BulkOrder() {
   };
 
   const updateQuantity = (productId: string, storeId: string, quantity: number) => {
+    // Find the product to check if it's a kit
+    const product = [...products, ...kits].find(p => p.id === productId);
+
+    // For kits, force quantity to be either 0 or 1
+    if (product?.is_kit) {
+      quantity = quantity > 0 ? 1 : 0;
+    }
+
     setOrderItems(prev => {
       const existing = prev.find(
         item => item.productId === productId && item.storeId === storeId
@@ -143,93 +167,68 @@ export default function BulkOrder() {
     return item?.quantity || 0;
   };
 
-  const handleSubmitOrders = async () => {
+  const handleAddToCart = async () => {
     if (orderItems.length === 0) {
-      toast.error('Please add items to your order');
+      toast.error(
+        language === 'en'
+          ? 'Please add items to your selection'
+          : 'Veuillez ajouter des articles à votre sélection'
+      );
       return;
     }
 
     setSubmitting(true);
 
     try {
-      // Group items by store
-      const ordersByStore = new Map<string, BulkOrderItem[]>();
-      
-      orderItems.forEach(item => {
-        const storeItems = ordersByStore.get(item.storeId) || [];
-        storeItems.push(item);
-        ordersByStore.set(item.storeId, storeItems);
-      });
+      let addedCount = 0;
 
-      // Create orders for each store
-      for (const [storeId, items] of ordersByStore.entries()) {
-        const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-        
-        // Calculate totals
-        let kitSubtotal = 0;
-        let individualSubtotal = 0;
-        
-        const orderItemsData = items.map(item => {
-          const product = [...products, ...kits].find(p => p.id === item.productId);
-          const unitPrice = product?.price || 0;
-          const extendedPrice = unitPrice * item.quantity;
-          
-          if (product?.is_kit) {
-            kitSubtotal += extendedPrice;
-          } else {
-            individualSubtotal += extendedPrice;
-          }
-          
-          return {
-            product_id: product?.is_kit ? null : item.productId,
-            kit_id: product?.is_kit ? item.productId : null,
-            quantity: item.quantity,
-            unit_price: unitPrice,
-            extended_price: extendedPrice,
-            is_kit: product?.is_kit || false,
+      // Add each item to cart
+      for (const item of orderItems) {
+        const product = [...products, ...kits].find(p => p.id === item.productId);
+
+        if (product) {
+          // Convert the bulk order product format to cart product format
+          const cartProduct = {
+            id: product.id,
+            nameEn: product.name_en,
+            nameFr: product.name_fr,
+            descriptionEn: '', // Default empty description
+            descriptionFr: '', // Default empty description
+            category: product.category,
+            price: product.price,
+            images: product.images || ['/placeholder-product.jpg'], // Use actual product images
+            isKit: product.is_kit || false,
           };
-        });
 
-        // Create order
-        const { data: order, error: orderError } = await supabase
-          .from('orders')
-          .insert({
-            order_number: orderNumber,
-            user_id: user?.id,
-            store_id: storeId,
-            kit_subtotal: kitSubtotal,
-            individual_subtotal: individualSubtotal,
-            total: kitSubtotal + individualSubtotal,
-            order_status: 'pending',
-          })
-          .select()
-          .single();
+          // Add to cart with store information
+          addItem({
+            product: cartProduct,
+            quantity: item.quantity,
+            storeId: item.storeId,
+          });
 
-        if (orderError) throw orderError;
-
-        // Insert order items
-        const itemsWithOrderId = orderItemsData.map(item => ({
-          ...item,
-          order_id: order.id,
-        }));
-
-        const { error: itemsError } = await supabase
-          .from('order_items')
-          .insert(itemsWithOrderId);
-
-        if (itemsError) throw itemsError;
+          addedCount++;
+        }
       }
 
       toast.success(
         language === 'en'
-          ? `${ordersByStore.size} order(s) created successfully!`
-          : `${ordersByStore.size} commande(s) créée(s) avec succès!`
+          ? `${addedCount} item(s) added to cart successfully!`
+          : `${addedCount} article(s) ajouté(s) au panier avec succès!`
       );
-      
-      navigate('/orders');
+
+      // Clear the bulk order selections
+      setOrderItems([]);
+
+      // Navigate to cart
+      navigate('/cart');
     } catch (error) {
-      console.error('Error creating orders:', error);
-      toast.error('Failed to create orders');
+      console.error('Error adding items to cart:', error);
+      toast.error(
+        language === 'en'
+          ? 'Failed to add items to cart'
+          : 'Échec de l\'ajout des articles au panier'
+      );
     } finally {
       setSubmitting(false);
     }
@@ -252,7 +251,7 @@ export default function BulkOrder() {
       <div className="min-h-screen bg-background">
         <Header />
         <main className="container py-8 px-4">
-          <div className="text-center text-muted-foreground">Loading...</div>
+          {/* <div className="text-center text-muted-foreground">Loading...</div> */}
         </main>
       </div>
     );
@@ -261,7 +260,7 @@ export default function BulkOrder() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       <main className="container py-8 px-4">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">
@@ -385,20 +384,36 @@ export default function BulkOrder() {
                           </td>
                           {selectedStores.map(storeId => (
                             <td key={storeId} className="px-4 py-3">
-                              <Input
-                                type="number"
-                                min="0"
-                                value={getQuantity(item.id, storeId) || ''}
-                                onChange={(e) =>
-                                  updateQuantity(
-                                    item.id,
-                                    storeId,
-                                    parseInt(e.target.value) || 0
-                                  )
-                                }
-                                className="w-20 text-center"
-                                placeholder="0"
-                              />
+                              <div className="flex justify-center">
+                                {item.is_kit ? (
+                                  <div className="flex items-center gap-2">
+                                    <Checkbox
+                                      checked={getQuantity(item.id, storeId) > 0}
+                                      onCheckedChange={(checked) =>
+                                        updateQuantity(item.id, storeId, checked ? 1 : 0)
+                                      }
+                                    />
+                                    <span className="text-sm text-gray-600">
+                                      {getQuantity(item.id, storeId) > 0 ? '1' : '0'}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    value={getQuantity(item.id, storeId) || ''}
+                                    onChange={(e) =>
+                                      updateQuantity(
+                                        item.id,
+                                        storeId,
+                                        parseInt(e.target.value) || 0
+                                      )
+                                    }
+                                    className="w-20 text-center"
+                                    placeholder="0"
+                                  />
+                                )}
+                              </div>
                             </td>
                           ))}
                         </tr>
@@ -409,21 +424,23 @@ export default function BulkOrder() {
               </CardContent>
             </Card>
 
-            {/* Submit Button */}
+            {/* Add to Cart Button */}
             <div className="mt-6 flex justify-end gap-4">
               <Button variant="outline" onClick={() => navigate('/store')}>
                 {language === 'en' ? 'Cancel' : 'Annuler'}
               </Button>
               <Button
-                onClick={handleSubmitOrders}
+                onClick={handleAddToCart}
                 disabled={submitting || orderItems.length === 0}
                 size="lg"
+                className="bg-red-600 hover:bg-red-700"
               >
+                <ShoppingCart className="h-4 w-4 mr-2" />
                 {submitting
-                  ? language === 'en' ? 'Creating orders...' : 'Création des commandes...'
+                  ? language === 'en' ? 'Adding to cart...' : 'Ajout au panier...'
                   : language === 'en'
-                  ? `Create Orders (${orderItems.length} items)`
-                  : `Créer les commandes (${orderItems.length} articles)`}
+                    ? `Add to Cart (${orderItems.length} items)`
+                    : `Ajouter au panier (${orderItems.length} articles)`}
               </Button>
             </div>
           </>

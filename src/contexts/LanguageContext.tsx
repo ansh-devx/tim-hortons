@@ -9,7 +9,7 @@ interface LanguageContextType {
 
 const translations = {
   en: {
-    'nav.store': 'Store',
+    'nav.store': 'Home',
     'nav.orders': 'My Orders',
     'nav.cart': 'Cart',
     'auth.login': 'Login',
@@ -31,7 +31,7 @@ const translations = {
     'cart.empty': 'Your cart is empty',
   },
   fr: {
-    'nav.store': 'Boutique',
+    'nav.store': 'Accueil',
     'nav.orders': 'Mes Commandes',
     'nav.cart': 'Panier',
     'auth.login': 'Connexion',

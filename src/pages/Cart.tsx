@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
@@ -12,12 +12,46 @@ import { Trash2, ShoppingBag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
+interface Store {
+  id: string;
+  name: string;
+}
+
 export default function Cart() {
   const { items, removeItem, updateQuantity, kitTotal, individualTotal, total, clearCart } = useCart();
   const { language, t } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [stores, setStores] = useState<Store[]>([]);
+
+  useEffect(() => {
+    loadStores();
+  }, []);
+
+  const loadStores = async () => {
+    try {
+      const { data: userStores } = await supabase
+        .from('user_stores')
+        .select('store_id, stores(id, name)')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+
+      if (userStores) {
+        const storeList = userStores
+          .map(us => us.stores)
+          .filter(Boolean) as Store[];
+        setStores(storeList);
+      }
+    } catch (error) {
+      console.error('Error loading stores:', error);
+    }
+  };
+
+  const getStoreName = (storeId?: string) => {
+    if (!storeId) return '';
+    const store = stores.find(s => s.id === storeId);
+    return store ? store.name : 'Unknown Store';
+  };
 
   const formatPrice = (price: number) => {
     return price.toLocaleString('en-CA', {
@@ -98,6 +132,22 @@ export default function Cart() {
   const kitItems = items.filter(item => item.product.isKit);
   const individualItems = items.filter(item => !item.product.isKit);
 
+  // Group items by store
+  const groupItemsByStore = (items: typeof kitItems) => {
+    const grouped: { [storeId: string]: typeof items } = {};
+    items.forEach(item => {
+      const storeId = item.storeId || 'no-store';
+      if (!grouped[storeId]) {
+        grouped[storeId] = [];
+      }
+      grouped[storeId].push(item);
+    });
+    return grouped;
+  };
+
+  const groupedKitItems = groupItemsByStore(kitItems);
+  const groupedIndividualItems = groupItemsByStore(individualItems);
+
   if (items.length === 0) {
     return (
       <div className="min-h-screen bg-background">
@@ -118,186 +168,325 @@ export default function Cart() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       <main className="container py-8 px-4">
         <h1 className="text-3xl font-bold mb-8">{t('cart.title')}</h1>
 
         <div className="grid gap-8 lg:grid-cols-3">
-          <div className="space-y-6 lg:col-span-2">
+          <div className="space-y-8 lg:col-span-2">
+            {/* Kit Products Section */}
             {kitItems.length > 0 && (
-              <Card>
-                <CardContent className="p-6">
-                  <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="h-8 w-1 bg-red-600 rounded-full"></div>
+                  <h2 className="text-2xl font-bold text-gray-900">
                     {t('cart.kitSubtotal')}
-                    <span className="text-sm font-normal text-muted-foreground">
-                      (Billed to Head Office)
-                    </span>
                   </h2>
-                  <div className="space-y-4">
-                    {kitItems.map(item => {
-                      const name = language === 'en' ? item.product.nameEn : item.product.nameFr;
-                      return (
-                        <div key={`${item.product.id}-${item.size}`} className="flex gap-4">
-                          <img
-                            src={item.product.images[0]}
-                            alt={name}
-                            className="h-20 w-20 rounded-md object-cover"
-                          />
-                          <div className="flex-1">
-                            <h3 className="font-medium">{name}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {item.product.category}
-                            </p>
-                            <div className="mt-2 flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                              >
-                                -
-                              </Button>
-                              <span className="w-8 text-center">{item.quantity}</span>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                              >
-                                +
-                              </Button>
-                            </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeItem(item.product.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {individualItems.length > 0 && (
-              <Card>
-                <CardContent className="p-6">
-                  <h2 className="text-xl font-semibold mb-4">
-                    {t('cart.individualSubtotal')}
-                  </h2>
-                  <div className="space-y-4">
-                    {individualItems.map(item => {
-                      const name = language === 'en' ? item.product.nameEn : item.product.nameFr;
-                      return (
-                        <div key={`${item.product.id}-${item.size}`} className="flex gap-4">
-                          <img
-                            src={item.product.images[0]}
-                            alt={name}
-                            className="h-20 w-20 rounded-md object-cover"
-                          />
-                          <div className="flex-1">
-                            <h3 className="font-medium">{name}</h3>
-                            {item.size && (
-                              <p className="text-sm text-muted-foreground">Size: {item.size}</p>
-                            )}
-                            <p className="text-sm font-semibold text-primary">
-                              ${formatPrice(item.product.price)}
-                            </p>
-                            <div className="mt-2 flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                              >
-                                -
-                              </Button>
-                              <span className="w-8 text-center">{item.quantity}</span>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                              >
-                                +
-                              </Button>
-                            </div>
-                          </div>
-                          <div className="flex flex-col items-end justify-between">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeItem(item.product.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                            <p className="font-semibold">
-                              ${formatPrice(item.product.price * item.quantity)}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          <div>
-            <Card className="sticky top-20">
-              <CardContent className="p-6 space-y-4">
-                <h2 className="text-xl font-semibold">Order Summary</h2>
-                
-                <Separator />
-                
-                {kitTotal > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t('cart.kitSubtotal')}</span>
-                    <span className="text-muted-foreground">Billed to HO</span>
-                  </div>
-                )}
-                
-                {individualTotal > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t('cart.individualSubtotal')}</span>
-                    <span className="font-medium">${formatPrice(individualTotal)}</span>
-                  </div>
-                )}
-                
-                <Separator />
-                
-                <div className="flex justify-between text-lg font-bold">
-                  <span>{t('cart.total')}</span>
-                  <span className="text-primary">
-                    {individualTotal > 0 ? `$${formatPrice(individualTotal)}` : '$0.00'}
+                  <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm font-medium rounded-full">
+                    Billed to Head Office
                   </span>
                 </div>
 
-                {individualTotal > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    * Credit card charge: ${formatPrice(individualTotal)}
-                  </p>
-                )}
-                
-                <Button 
-                  className="w-full" 
-                  size="lg"
-                  onClick={handleCheckout}
-                  disabled={isCheckingOut}
-                >
-                  {isCheckingOut ? 'Processing...' : t('cart.checkout')}
-                </Button>
+                {Object.entries(groupedKitItems).map(([storeId, storeItems]) => (
+                  <Card key={storeId} className="border-l-4 border-l-red-600">
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <h3 className="text-lg font-semibold text-gray-800">
+                          {storeId === 'no-store' ? 'General Order' : getStoreName(storeId)}
+                        </h3>
+                        <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
+                          {storeItems.length} item{storeItems.length > 1 ? 's' : ''}
+                        </span>
+                      </div>
 
-                <Link to="/store">
-                  <Button variant="outline" className="w-full">
-                    Continue Shopping
+                      <div className="space-y-4">
+                        {storeItems.map(item => {
+                          const name = language === 'en' ? item.product.nameEn : item.product.nameFr;
+                          return (
+                            <div key={`${item.product.id}-${item.size}-${item.storeId}`} className="flex gap-4 p-4 bg-gray-50 rounded-lg">
+                              <img
+                                src={item.product.images[0]}
+                                alt={name}
+                                className="h-20 w-20 rounded-md object-cover border"
+                              />
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-gray-900">{name}</h4>
+                                <p className="text-sm text-gray-600 mb-2">
+                                  {item.product.category}
+                                </p>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-gray-700 font-medium">
+                                    Quantity: {item.quantity}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex flex-col justify-between items-end">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => removeItem(item.product.id, item.size, item.storeId)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                                <span className="text-sm font-medium text-green-600">
+                                  Billed to HO
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* Individual Products Section */}
+            {individualItems.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="h-8 w-1 bg-blue-600 rounded-full"></div>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    {t('cart.individualSubtotal')}
+                  </h2>
+                  <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
+                    Credit Card Payment
+                  </span>
+                </div>
+
+                {Object.entries(groupedIndividualItems).map(([storeId, storeItems]) => {
+                  const storeSubtotal = storeItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+                  return (
+                    <Card key={storeId} className="border-l-4 border-l-blue-600">
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-lg font-semibold text-gray-800">
+                              {storeId === 'no-store' ? 'General Order' : getStoreName(storeId)}
+                            </h3>
+                            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
+                              {storeItems.length} item{storeItems.length > 1 ? 's' : ''}
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-gray-600">Store Subtotal</p>
+                            <p className="text-lg font-bold text-blue-600">
+                              ${formatPrice(storeSubtotal)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          {storeItems.map(item => {
+                            const name = language === 'en' ? item.product.nameEn : item.product.nameFr;
+                            return (
+                              <div key={`${item.product.id}-${item.size}-${item.storeId}`} className="flex gap-4 p-4 bg-gray-50 rounded-lg">
+                                <img
+                                  src={item.product.images[0]}
+                                  alt={name}
+                                  className="h-20 w-20 rounded-md object-cover border"
+                                />
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-gray-900">{name}</h4>
+                                  <div className="flex gap-4 text-sm text-gray-600 mb-2">
+                                    <span>{item.product.category}</span>
+                                    {item.size && <span>Size: {item.size}</span>}
+                                  </div>
+                                  <p className="text-sm font-semibold text-blue-600 mb-2">
+                                    ${formatPrice(item.product.price)} each
+                                  </p>
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.size, item.storeId)}
+                                    >
+                                      -
+                                    </Button>
+                                    <span className="w-12 text-center font-medium bg-white px-2 py-1 rounded border">
+                                      {item.quantity}
+                                    </span>
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.size, item.storeId)}
+                                    >
+                                      +
+                                    </Button>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col justify-between items-end">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                    onClick={() => removeItem(item.product.id, item.size, item.storeId)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                  <div className="text-right">
+                                    <p className="text-sm text-gray-500">Total</p>
+                                    <p className="text-lg font-bold text-gray-900">
+                                      ${formatPrice(item.product.price * item.quantity)}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Enhanced Order Summary */}
+          <div>
+            <Card className="sticky top-20 shadow-lg">
+              <CardContent className="p-6 space-y-6">
+                <div className="text-center">
+                  <h2 className="text-2xl font-bold text-gray-900">Order Summary</h2>
+                  <p className="text-sm text-gray-600 mt-1">Review your items before checkout</p>
+                </div>
+
+                <Separator />
+
+                {/* Kit Products Summary */}
+                {kitItems.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-1 bg-red-600 rounded-full"></div>
+                      <h3 className="font-semibold text-gray-800">Kit Products</h3>
+                      <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                        Billed to HO
+                      </span>
+                    </div>
+                    <div className="space-y-2 pl-3">
+                      {Object.entries(groupedKitItems).map(([storeId, storeItems]) => (
+                        <div key={storeId} className="space-y-1">
+                          <p className="text-sm font-medium text-gray-700">
+                            {storeId === 'no-store' ? 'General Order' : getStoreName(storeId)}
+                          </p>
+                          {storeItems.map(item => {
+                            const name = language === 'en' ? item.product.nameEn : item.product.nameFr;
+                            return (
+                              <div key={`${item.product.id}-${item.size}-${item.storeId}`} className="flex justify-between text-sm pl-2">
+                                <span className="text-gray-600">
+                                  {name} × {item.quantity}
+                                </span>
+                                <span></span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {kitItems.length > 0 && individualItems.length > 0 && <Separator />}
+
+                {/* Individual Products Summary */}
+                {individualItems.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-1 bg-blue-600 rounded-full"></div>
+                      <h3 className="font-semibold text-gray-800">Individual Products</h3>
+                    </div>
+                    <div className="space-y-2 pl-3">
+                      {Object.entries(groupedIndividualItems).map(([storeId, storeItems]) => {
+                        const storeSubtotal = storeItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+                        return (
+                          <div key={storeId} className="space-y-1">
+                            <div className="flex justify-between text-sm font-medium text-gray-700">
+                              <span>{storeId === 'no-store' ? 'General Order' : getStoreName(storeId)}</span>
+                              <span className="text-blue-600">${formatPrice(storeSubtotal)}</span>
+                            </div>
+                            {storeItems.map(item => {
+                              const name = language === 'en' ? item.product.nameEn : item.product.nameFr;
+                              return (
+                                <div key={`${item.product.id}-${item.size}-${item.storeId}`} className="flex justify-between text-sm pl-2">
+                                  <span className="text-gray-600">
+                                    {name} × {item.quantity}
+                                  </span>
+                                  <span className="text-gray-800">
+                                    ${formatPrice(item.product.price * item.quantity)}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <Separator />
+
+                {/* Payment Summary */}
+                <div className="space-y-3">
+                  {kitTotal > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Kit Products Total</span>
+                      <span className="text-green-600 font-medium">Billed to Head Office</span>
+                    </div>
+                  )}
+
+                  {individualTotal > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Individual Products Total</span>
+                      <span className="font-medium text-gray-800">${formatPrice(individualTotal)}</span>
+                    </div>
+                  )}
+
+                  <Separator />
+
+                  {/* <div className="flex justify-between text-lg font-bold">
+                    <span className="text-gray-900">Total Amount</span>
+                    <span className="text-gray-900">
+                      {individualTotal > 0 ? `$${formatPrice(individualTotal)}` : '$0.00'}
+                    </span>
+                  </div> */}
+
+                  {individualTotal > 0 && (
+                    <div className="flex justify-between bg-green-50 border border-green-200 rounded-lg p-3 mt-3">
+                      <div className="flex items-center gap-2">
+                        <img src="/credit-card.svg" alt="Credit card" className="h-4 w-4" />
+                        <p className="text-sm font-semibold text-green-800">
+                          Credit Card Charge
+                        </p>
+                      </div>
+                      <p className="text-lg font-bold text-green-700 mt-1">
+                        ${formatPrice(individualTotal)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col space-y-3 pt-2">
+                  <Button
+                    className="w-full bg-red-600 hover:bg-red-700"
+                    size="lg"
+                    onClick={handleCheckout}
+                    disabled={isCheckingOut}
+                  >
+                    {isCheckingOut ? 'Processing...' : t('cart.checkout')}
                   </Button>
-                </Link>
+
+                  <Link to="/store">
+                    <Button variant="outline" className="w-full border-red-600 text-red-600 hover:bg-red-50">
+                      Continue Shopping
+                    </Button>
+                  </Link>
+                </div>
               </CardContent>
             </Card>
           </div>

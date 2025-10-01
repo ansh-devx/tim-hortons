@@ -31,7 +31,15 @@ export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
   };
 
   return (
-    <Card className="group overflow-hidden transition-all hover:shadow-lg">
+    <Card className="group overflow-hidden transition-all hover:shadow-lg relative">
+      {/* Badge positioned at top-left corner */}
+      <Badge
+        variant="secondary"
+        className="absolute top-2 left-2 z-10 text-xs bg-red-600 text-white"
+      >
+        {product.isKit ? 'Kit' : 'Individual'}
+      </Badge>
+
       <Link to={`/product/${product.id}`}>
         <div className="aspect-square overflow-hidden bg-secondary">
           <img
@@ -42,17 +50,12 @@ export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
         </div>
       </Link>
       <CardContent className="p-4">
-        <div className="mb-2 flex items-start justify-between gap-2">
-          <Link to={`/product/${product.id}`} className="flex-1">
+        <div className="mb-2">
+          <Link to={`/product/${product.id}`}>
             <h3 className="font-semibold text-foreground transition-colors group-hover:text-primary line-clamp-2">
               {name}
             </h3>
           </Link>
-          {product.isKit && (
-            <Badge variant="kit" className="shrink-0">
-              {t('product.kit')}
-            </Badge>
-          )}
         </div>
         <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
       </CardContent>

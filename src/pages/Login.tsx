@@ -27,39 +27,39 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     const { error } = await signIn(email, password);
-    
+
     if (error) {
       toast.error(error.message || (language === 'en' ? 'Login failed' : 'Échec de la connexion'));
     } else {
       toast.success(language === 'en' ? 'Login successful!' : 'Connexion réussie!');
       navigate('/store');
     }
-    
+
     setLoading(false);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     const { error } = await signUp(email, password, language);
-    
+
     if (error) {
       toast.error(error.message || (language === 'en' ? 'Sign up failed' : 'Échec de l\'inscription'));
     } else {
       toast.success(language === 'en' ? 'Account created! Logging in...' : 'Compte créé! Connexion...');
       navigate('/store');
     }
-    
+
     setLoading(false);
   };
 
   if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-muted-foreground">Loading...</div>
+        {/* <div className="text-muted-foreground">Loading...</div> */}
       </div>
     );
   }
@@ -86,7 +86,7 @@ export default function Login() {
                 {language === 'en' ? 'Sign Up' : 'S\'inscrire'}
               </TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
@@ -115,7 +115,7 @@ export default function Login() {
                 </Button>
               </form>
             </TabsContent>
-            
+
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-2">
@@ -144,8 +144,8 @@ export default function Login() {
                   </p>
                 </div>
                 <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                  {loading 
-                    ? (language === 'en' ? 'Creating account...' : 'Création du compte...') 
+                  {loading
+                    ? (language === 'en' ? 'Creating account...' : 'Création du compte...')
                     : (language === 'en' ? 'Create Account' : 'Créer un compte')
                   }
                 </Button>
