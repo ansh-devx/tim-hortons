@@ -104,6 +104,7 @@ export type Database = {
           is_standard: boolean
           name_en: string
           name_fr: string
+          products: string[]
           requires_approval: boolean
           updated_at: string
         }
@@ -118,6 +119,7 @@ export type Database = {
           is_standard?: boolean
           name_en: string
           name_fr: string
+          products?: string[]
           requires_approval?: boolean
           updated_at?: string
         }
@@ -132,6 +134,7 @@ export type Database = {
           is_standard?: boolean
           name_en?: string
           name_fr?: string
+          products?: string[]
           requires_approval?: boolean
           updated_at?: string
         }

@@ -11,6 +11,7 @@ export interface Product {
   images: string[];
   sizes?: string[];
   isKit: boolean;
+  products?: string[]; // Kit products array (only for kits)
 }
 
 export interface Store {

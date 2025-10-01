@@ -90,6 +90,7 @@ export default function ProductDetail() {
           category: kitData.category,
           images: kitData.images,
           isKit: true,
+          products: kitData.products || [], // Include the products array
         });
       }
     } catch (error) {
@@ -265,6 +266,25 @@ export default function ProductDetail() {
             </div>
 
             <p className="text-foreground leading-relaxed">{description}</p>
+
+            {/* Kit Contents Section */}
+            {product.isKit && product.products && product.products.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold text-foreground">
+                  {language === 'en' ? 'Kit Contents:' : 'Contenu du kit :'}
+                </h3>
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <ul className="space-y-2">
+                    {product.products.map((item, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <span className="text-red-600 font-bold">•</span>
+                        <span className="text-gray-700 font-medium">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
 
             {product.sizes && (
               <div className="space-y-2">
