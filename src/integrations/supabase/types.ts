@@ -95,6 +95,7 @@ export type Database = {
       kits: {
         Row: {
           category: string
+          category_fr: string | null
           created_at: string
           description_en: string | null
           description_fr: string | null
@@ -110,6 +111,7 @@ export type Database = {
         }
         Insert: {
           category: string
+          category_fr?: string | null
           created_at?: string
           description_en?: string | null
           description_fr?: string | null
@@ -125,6 +127,7 @@ export type Database = {
         }
         Update: {
           category?: string
+          category_fr?: string | null
           created_at?: string
           description_en?: string | null
           description_fr?: string | null
@@ -221,7 +224,10 @@ export type Database = {
           order_status: Database["public"]["Enums"]["order_status"]
           payment_reference: string | null
           payment_status: Database["public"]["Enums"]["payment_status"]
+          shipping_amount: number | null
           store_id: string
+          tax_amount: number | null
+          tax_rate: number | null
           total: number
           updated_at: string
           user_id: string
@@ -236,7 +242,10 @@ export type Database = {
           order_status?: Database["public"]["Enums"]["order_status"]
           payment_reference?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
+          shipping_amount?: number | null
           store_id: string
+          tax_amount?: number | null
+          tax_rate?: number | null
           total?: number
           updated_at?: string
           user_id: string
@@ -251,7 +260,10 @@ export type Database = {
           order_status?: Database["public"]["Enums"]["order_status"]
           payment_reference?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
+          shipping_amount?: number | null
           store_id?: string
+          tax_amount?: number | null
+          tax_rate?: number | null
           total?: number
           updated_at?: string
           user_id?: string
@@ -276,6 +288,7 @@ export type Database = {
       products: {
         Row: {
           category: string
+          category_fr: string | null
           created_at: string
           description_en: string | null
           description_fr: string | null
@@ -290,6 +303,7 @@ export type Database = {
         }
         Insert: {
           category: string
+          category_fr?: string | null
           created_at?: string
           description_en?: string | null
           description_fr?: string | null
@@ -304,6 +318,7 @@ export type Database = {
         }
         Update: {
           category?: string
+          category_fr?: string | null
           created_at?: string
           description_en?: string | null
           description_fr?: string | null

@@ -8,6 +8,7 @@ export interface Product {
   descriptionFr: string;
   price: number;
   category: string;
+  categoryFr?: string;
   images: string[];
   sizes?: string[];
   isKit: boolean;

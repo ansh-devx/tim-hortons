@@ -64,6 +64,7 @@ export default function ProductDetail() {
           descriptionFr: productData.description_fr || '',
           price: Number(productData.price),
           category: productData.category,
+          categoryFr: productData.category_fr,
           images: productData.images,
           sizes: productData.sizes || undefined,
           isKit: false,
@@ -88,6 +89,7 @@ export default function ProductDetail() {
           descriptionFr: kitData.description_fr || '',
           price: 0,
           category: kitData.category,
+          categoryFr: kitData.category_fr,
           images: kitData.images,
           isKit: true,
           products: kitData.products || [], // Include the products array

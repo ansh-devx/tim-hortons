@@ -2,13 +2,7 @@ import { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { ProductCard } from '@/components/ProductCard';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCart } from '@/contexts/CartContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,7 +15,7 @@ interface Store {
 }
 
 export default function Store() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { addItem } = useCart();
   const [stores, setStores] = useState<Store[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -75,6 +69,7 @@ export default function Store() {
           descriptionFr: p.description_fr || '',
           price: Number(p.price),
           category: p.category,
+          categoryFr: p.category_fr,
           images: p.images,
           sizes: p.sizes || undefined,
           isKit: false,
@@ -87,6 +82,7 @@ export default function Store() {
           descriptionFr: k.description_fr || '',
           price: 0,
           category: k.category,
+          categoryFr: k.category_fr,
           images: k.images,
           isKit: true,
         })),
@@ -122,6 +118,22 @@ export default function Store() {
 
   const categories = ['all', ...Array.from(new Set(products.map(p => p.category))).sort()];
 
+  // Create a mapping from English categories to French categories
+  const categoryTranslationMap = products.reduce((map, product) => {
+    if (product.categoryFr && !map[product.category]) {
+      map[product.category] = product.categoryFr;
+    }
+    return map;
+  }, {} as Record<string, string>);
+
+  const translateCategory = (category: string) => {
+    if (category === 'all') return t('store.allItems');
+    // Use database French category if available, otherwise return English category
+    return language === 'fr' && categoryTranslationMap[category]
+      ? categoryTranslationMap[category]
+      : category;
+  };
+
   const filteredProducts = (
     selectedCategory === 'all'
       ? products
@@ -155,7 +167,7 @@ export default function Store() {
               {t('nav.store')}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Order products for your stores
+              {t('store.orderProducts')}
             </p>
           </div>
 
@@ -183,7 +195,7 @@ export default function Store() {
             onClick={() => setSelectedCategory('all')}
             size="sm"
           >
-            {t('store.allItems')}
+            {translateCategory('all')}
           </Button>
           {categories.slice(1).map(category => (
             <Button
@@ -192,13 +204,13 @@ export default function Store() {
               onClick={() => setSelectedCategory(category)}
               size="sm"
             >
-              {category}
+              {translateCategory(category)}
             </Button>
           ))}
         </div>
 
         {filteredProducts.length === 0 ? (
-          <p className="text-center text-muted-foreground">No products available</p>
+          <p className="text-center text-muted-foreground">{t('store.noProducts')}</p>
         ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredProducts.map(product => (
